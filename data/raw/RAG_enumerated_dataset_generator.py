@@ -33,7 +33,7 @@ MAX_CELLS_HEIGHT = 4  # Maximum number of cells in height (Z-layers)
 MAX_SERIES = 64
 MAX_PARALLEL = 64
 
-save_path = 'enumerated_battery_pack_dataset_[64-64-4-64-64].json'
+save_path = './data/raw/enumerated_battery_pack_dataset_[64-64-4-64-64].json'
 
 def generate_hexagonal_layout(num_cells_w, num_cells_d, num_cells_h):
     """

@@ -9,7 +9,7 @@ raw_set = "[128-128-4-128-128]"
 
 # 1. Load the new battery pack dataset (.jsonl format)
 designs = []
-with open("./raw/" + sub_set + "_" + raw_set + "/enumerated_battery_pack_dataset_" + raw_set + ".json", "r") as f:
+with open("./data/raw/" + sub_set + "_" + raw_set + "/enumerated_battery_pack_dataset_" + raw_set + ".json", "r") as f:
     designs = json.load(f)
 
 # 2. Format each design entry into a retrievable string
@@ -64,7 +64,7 @@ embeddings = model.encode(descriptions, convert_to_numpy=True)
 index = faiss.IndexFlatL2(embeddings.shape[1])
 index.add(embeddings)
 
-output_dir = "./faiss_encoded/" + sub_set + "_" + raw_set
+output_dir = "./data/faiss_encoded/" + sub_set + "_" + raw_set
 os.makedirs(output_dir, exist_ok=True)
 
 faiss.write_index(index, output_dir + "/rag_index_" + sub_set + "_" + raw_set + ".faiss")

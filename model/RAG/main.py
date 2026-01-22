@@ -319,8 +319,8 @@ def run_batch_experiments(num_prompts=10, random_seed=2026, cell_limit=16, outpu
     df = pd.DataFrame(results)
 
     # Save to output directory
-    os.makedirs("output", exist_ok=True)
-    excel_path = os.path.join("output", output_excel)
+    os.makedirs("./model/RAG/output", exist_ok=True)
+    excel_path = os.path.join("./model/RAG/output", output_excel)
     df.to_excel(excel_path, index=False, engine='openpyxl')
 
     print(f"\n{'='*50}")
