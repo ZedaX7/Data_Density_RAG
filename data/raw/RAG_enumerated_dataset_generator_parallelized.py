@@ -39,7 +39,8 @@ MAX_PARALLEL = 128
 # Parallelization settings - USER CONFIGURABLE
 NUM_WORKERS = 16 #cpu_count()  # Use all available CPU cores, or set to specific number
 
-save_path = './data/raw/full_[128-128-4-128-128]/enumerated_battery_pack_dataset_[128-128-4-128-128].json'
+dataset_name = f"[{MAX_CELLS_WIDTH}-{MAX_CELLS_DEPTH}-{MAX_CELLS_HEIGHT}-{MAX_SERIES}-{MAX_PARALLEL}]"
+save_path = f"./data/raw/full_{dataset_name}/enumerated_battery_pack_dataset_{dataset_name}.json"
 
 def generate_hexagonal_layout(num_cells_w, num_cells_d, num_cells_h):
     """

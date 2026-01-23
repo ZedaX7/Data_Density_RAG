@@ -33,7 +33,8 @@ MAX_CELLS_HEIGHT = 4  # Maximum number of cells in height (Z-layers)
 MAX_SERIES = 64
 MAX_PARALLEL = 64
 
-save_path = './data/raw/enumerated_battery_pack_dataset_[64-64-4-64-64].json'
+dataset_name = f"[{MAX_CELLS_WIDTH}-{MAX_CELLS_DEPTH}-{MAX_CELLS_HEIGHT}-{MAX_SERIES}-{MAX_PARALLEL}]"
+save_path = f"./data/raw/full_{dataset_name}/enumerated_battery_pack_dataset_{dataset_name}.json"
 
 def generate_hexagonal_layout(num_cells_w, num_cells_d, num_cells_h):
     """
@@ -342,6 +343,7 @@ class Synthetic_Battery_Pack_Dataset(Dataset):
 
 def export_to_json(dataset, filename):
     export_data = dataset.data
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, "w") as f:
         json.dump(export_data, f, indent=2)
     print(f"\n💾 Dataset exported to {filename}")
