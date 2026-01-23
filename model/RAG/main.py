@@ -1,12 +1,14 @@
 import ast
 import re
 import os
+import sys
 import json
 from datetime import datetime
 import pybamm
 import random
 import pandas as pd
 import numpy as np
+import torch
 
 from retrieve import retrieve_relevant_docs
 from generate import generate_answer, initialize_model
@@ -20,7 +22,7 @@ DATA_NAME = sub_set + "_" + raw_set
 
 # Model configuration
 # Available models: "llama3-8b", "llama33-70b", "llama4-17b"
-MODEL_KEY = "llama33-70b"
+MODEL_KEY = "llama3-8b"
 # ============================================================
 
 def validate_with_pybamm(features):
@@ -289,6 +291,68 @@ def run_batch_experiments(num_prompts=10, random_seed=2026, cell_limit=16, outpu
                     "parallel_count": design_result["parallel_count"],
                     "pybamm_validated": design_result["pybamm_result"],
                     "generation_status": "Success"
+                })
+
+        except torch.cuda.OutOfMemoryError as e:
+            print(f"\n{'='*80}")
+            print(f"[FATAL] CUDA OUT OF MEMORY during experiment {i+1}")
+            print(f"[FATAL] Error: {e}")
+            print(f"[FATAL] Terminating batch experiment...")
+            print(f"{'='*80}")
+
+            # Save partial results before terminating
+            if results:
+                df = pd.DataFrame(results)
+                os.makedirs("./model/RAG/output", exist_ok=True)
+                partial_excel = f"PARTIAL_{output_excel}"
+                excel_path = os.path.join("./model/RAG/output", partial_excel)
+                df.to_excel(excel_path, index=False, engine='openpyxl')
+                print(f"[INFO] Partial results ({len(results)} experiments) saved to: {excel_path}")
+
+            sys.exit(1)
+
+        except RuntimeError as e:
+            # Catch CUDA OOM that may be raised as RuntimeError in some PyTorch versions
+            if "CUDA out of memory" in str(e) or "out of memory" in str(e).lower():
+                print(f"\n{'='*80}")
+                print(f"[FATAL] CUDA OUT OF MEMORY during experiment {i+1}")
+                print(f"[FATAL] Error: {e}")
+                print(f"[FATAL] Terminating batch experiment...")
+                print(f"{'='*80}")
+
+                # Save partial results before terminating
+                if results:
+                    df = pd.DataFrame(results)
+                    os.makedirs("./model/RAG/output", exist_ok=True)
+                    partial_excel = f"PARTIAL_{output_excel}"
+                    excel_path = os.path.join("./model/RAG/output", partial_excel)
+                    df.to_excel(excel_path, index=False, engine='openpyxl')
+                    print(f"[INFO] Partial results ({len(results)} experiments) saved to: {excel_path}")
+
+                sys.exit(1)
+            else:
+                # Re-raise other RuntimeErrors or handle as generic exception
+                print(f"[ERROR] RuntimeError during experiment {i+1}: {e}")
+                results.append({
+                    "experiment_id": i + 1,
+                    "prompt": prompt,
+                    "required_voltage": req_voltage,
+                    "required_capacity": req_capacity,
+                    "required_width_mm": req_width,
+                    "required_depth_mm": req_depth,
+                    "required_height_mm": req_height,
+                    # "application": application,
+                    "generated_voltage": None,
+                    "generated_capacity": None,
+                    "generated_width_mm": None,
+                    "generated_depth_mm": None,
+                    "generated_height_mm": None,
+                    "cell_locations": None,
+                    # "cell_connections": None,
+                    "series_count": None,
+                    "parallel_count": None,
+                    "pybamm_validated": False,
+                    "generation_status": f"Error: {str(e)}"
                 })
 
         except Exception as e:
