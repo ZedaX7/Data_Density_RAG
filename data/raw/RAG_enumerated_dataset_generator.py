@@ -5,6 +5,7 @@ import pybamm
 import traceback
 import numpy as np
 import time
+import os
 
 # 18650 Cell specifications
 CELL_SPECS = {
