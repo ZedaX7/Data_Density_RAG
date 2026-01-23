@@ -13,7 +13,7 @@ gc.collect()
 
 # Set environment variables for multi-GPU
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3,4"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
 
 print(f"Available GPUs: {torch.cuda.device_count()}")
 for i in range(torch.cuda.device_count()):
@@ -22,9 +22,9 @@ for i in range(torch.cuda.device_count()):
 
 # Available model configurations
 MODEL_CONFIGS = {
-    "llama3-8b": "/mnt/c/Users/kovac/Desktop/pre_trained/Meta-Llama-3-8B-Instruct",
-    "llama33-70b": "/mnt/c/Users/kovac/Desktop/pre_trained/Llama-3.3-70B-Instruct",
-    "llama4-17b": "/mnt/c/Users/kovac/Desktop/pre_trained/Llama-4-Scout-17B-16E-Instruct",
+    "llama3-8b": "meta-llama/Meta-Llama-3-8B-Instruct",
+    "llama33-70b": "meta-llama/Llama-3.3-70B-Instruct",
+    "llama4-17b": "meta-llama/Llama-4-Scout-17B-16E-Instruct",
 }
 
 # Global variables for model and tokenizer (will be initialized when needed)
@@ -82,10 +82,10 @@ def initialize_model(model_key="llama33-70b"):
         low_cpu_mem_usage=True,
         trust_remote_code=True,
         max_memory={
-            0: "22GiB",   # 4090
-            1: "22GiB",   # 3090 Ti
-            2: "22GiB",   # 3090
-            # 3: "22GiB",   # 3090
+            0: "20GiB",   # A4000 Ada
+            1: "20GiB",   # A4000 Ada
+            2: "20GiB",   # A4000 Ada
+            3: "20GiB",   # A4000 Ada
         },
     )
 

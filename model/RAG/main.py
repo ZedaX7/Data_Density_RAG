@@ -20,7 +20,7 @@ DATA_NAME = sub_set + "_" + raw_set
 
 # Model configuration
 # Available models: "llama3-8b", "llama33-70b", "llama4-17b"
-MODEL_KEY = "llama33-70b"
+MODEL_KEY = "llama3-8b"
 # ============================================================
 
 def validate_with_pybamm(features):

@@ -28,18 +28,19 @@ MIN_SPACING = 2.0  # mm between cells (x)
 SAFETY_MARGIN = 5.0  # mm between cells and pack wall (y)
 
 # Maximum cells in each dimension - USER CONFIGURABLE
-MAX_CELLS_WIDTH = 32  # Maximum number of cells in width
-MAX_CELLS_DEPTH = 32  # Maximum number of cells in depth
+MAX_CELLS_WIDTH = 64  # Maximum number of cells in width
+MAX_CELLS_DEPTH = 64  # Maximum number of cells in depth
 MAX_CELLS_HEIGHT = 4  # Maximum number of cells in height (Z-layers)
 
 # Maximum series and parallel configurations - USER CONFIGURABLE
-MAX_SERIES = 32
-MAX_PARALLEL = 32
+MAX_SERIES = 64
+MAX_PARALLEL = 64
 
 # Parallelization settings - USER CONFIGURABLE
 NUM_WORKERS = 16 #cpu_count()  # Use all available CPU cores, or set to specific number
 
-save_path = './data/raw/full_[32-32-4-32-32]/enumerated_battery_pack_dataset_[32-32-4-32-32].json'
+dataset_name = f"[{MAX_CELLS_WIDTH}-{MAX_CELLS_DEPTH}-{MAX_CELLS_HEIGHT}-{MAX_SERIES}-{MAX_PARALLEL}]"
+save_path = f"./data/raw/full_{dataset_name}/enumerated_battery_pack_dataset_{dataset_name}.json"
 
 def generate_hexagonal_layout(num_cells_w, num_cells_d, num_cells_h):
     """
