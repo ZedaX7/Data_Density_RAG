@@ -5,7 +5,7 @@ from sentence_transformers import SentenceTransformer
 import os
 
 sub_set = "full"
-raw_set = "[128-128-4-128-128]"
+raw_set = "[64-64-4-64-64]"
 
 # 1. Load the new battery pack dataset (.jsonl format)
 designs = []

@@ -28,18 +28,18 @@ MIN_SPACING = 2.0  # mm between cells (x)
 SAFETY_MARGIN = 5.0  # mm between cells and pack wall (y)
 
 # Maximum cells in each dimension - USER CONFIGURABLE
-MAX_CELLS_WIDTH = 128  # Maximum number of cells in width
-MAX_CELLS_DEPTH = 128  # Maximum number of cells in depth
+MAX_CELLS_WIDTH = 32  # Maximum number of cells in width
+MAX_CELLS_DEPTH = 32  # Maximum number of cells in depth
 MAX_CELLS_HEIGHT = 4  # Maximum number of cells in height (Z-layers)
 
 # Maximum series and parallel configurations - USER CONFIGURABLE
-MAX_SERIES = 128
-MAX_PARALLEL = 128
+MAX_SERIES = 32
+MAX_PARALLEL = 32
 
 # Parallelization settings - USER CONFIGURABLE
 NUM_WORKERS = 16 #cpu_count()  # Use all available CPU cores, or set to specific number
 
-save_path = './data/raw/enumerated_battery_pack_dataset_[128-128-4-128-128].json'
+save_path = './data/raw/full_[32-32-4-32-32]/enumerated_battery_pack_dataset_[32-32-4-32-32].json'
 
 def generate_hexagonal_layout(num_cells_w, num_cells_d, num_cells_h):
     """
@@ -362,6 +362,7 @@ class Synthetic_Battery_Pack_Dataset_Parallel(Dataset):
 
 def export_to_json(dataset, filename):
     export_data = dataset.data
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, "w") as f:
         json.dump(export_data, f, indent=2)
     print(f"\n💾 Dataset exported to {filename}")
