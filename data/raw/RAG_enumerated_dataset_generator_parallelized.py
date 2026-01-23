@@ -39,7 +39,7 @@ MAX_PARALLEL = 128
 # Parallelization settings - USER CONFIGURABLE
 NUM_WORKERS = 16 #cpu_count()  # Use all available CPU cores, or set to specific number
 
-save_path = './data/raw/enumerated_battery_pack_dataset_[128-128-4-128-128].json'
+save_path = './data/raw/full_[128-128-4-128-128]/enumerated_battery_pack_dataset_[128-128-4-128-128].json'
 
 def generate_hexagonal_layout(num_cells_w, num_cells_d, num_cells_h):
     """
@@ -362,6 +362,7 @@ class Synthetic_Battery_Pack_Dataset_Parallel(Dataset):
 
 def export_to_json(dataset, filename):
     export_data = dataset.data
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, "w") as f:
         json.dump(export_data, f, indent=2)
     print(f"\n💾 Dataset exported to {filename}")
