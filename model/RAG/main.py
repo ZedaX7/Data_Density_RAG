@@ -17,7 +17,7 @@ from visual_rendering import render_battery_pack
 # ==================== USER CONFIGURATION ====================
 # Data configuration
 sub_set = "full"
-raw_set = "[16-16-4-16-16]"
+raw_set = "[32-32-4-32-32]"
 DATA_NAME = sub_set + "_" + raw_set
 
 # Model configuration
