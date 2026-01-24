@@ -14,7 +14,8 @@ def retrieve_relevant_docs(query, data_name="full_[64-64-4-64-64]", top_k=5):
 
     # Encode query
     model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2",
-                                device=device)
+                                device=device, 
+                                cache_folder="./pre_trained/hf_cache")
     
     query_vec = model.encode([query], 
                              device=device,

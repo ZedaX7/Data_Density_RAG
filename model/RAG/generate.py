@@ -22,9 +22,9 @@ for i in range(torch.cuda.device_count()):
 
 # Available model configurations
 MODEL_CONFIGS = {
-    "llama3-8b": "meta-llama/Meta-Llama-3-8B-Instruct",
-    "llama33-70b": "meta-llama/Llama-3.3-70B-Instruct",
-    "llama4-17b": "meta-llama/Llama-4-Scout-17B-16E-Instruct",
+    "llama3-8b": "./pre_trained/Llama-3-8B-Instruct",
+    "llama33-70b": "./pre_trained/Llama-3.3-70B-Instruct",
+    "llama4-17b": "./pre_trained/Llama-4-Scout-17B-16E-Instruct",
 }
 
 # Global variables for model and tokenizer (will be initialized when needed)
