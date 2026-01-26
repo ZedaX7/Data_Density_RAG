@@ -4,7 +4,7 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 
 path = "./data/faiss_encoded/"
-device = "cuda:0"
+device = "cuda:3"
 
 def retrieve_relevant_docs(query, data_name="full_[64-64-4-64-64]", top_k=5):
     # Load index & metadata

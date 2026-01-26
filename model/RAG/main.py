@@ -17,12 +17,12 @@ from visual_rendering import render_battery_pack
 # ==================== USER CONFIGURATION ====================
 # Data configuration
 sub_set = "full"
-raw_set = "[32-32-4-32-32]"
+raw_set = "[16-16-4-16-16]"
 DATA_NAME = sub_set + "_" + raw_set
 
 # Model configuration
-# Available models: "llama3-8b", "llama33-70b", "llama4-17b"
-MODEL_KEY = "llama3-8b"
+# Available models: "llama3-8b", "llama31-8b", "llama32-3b", "llama33-70b", "llama4-17b"
+MODEL_KEY = "llama31-8b"
 # ============================================================
 
 def validate_with_pybamm(features):
@@ -153,7 +153,7 @@ def generate_random_prompt(seed=None, cell_limit=16):
 
 def main(query, render=False):
     """Generate a single battery pack design for the given query."""
-    docs = retrieve_relevant_docs(query, data_name=DATA_NAME)
+    docs = retrieve_relevant_docs(query, data_name=DATA_NAME, top_k=3)
     max_retries = 3
     retry_count = 0
 
