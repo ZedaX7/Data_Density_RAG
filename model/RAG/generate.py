@@ -23,6 +23,8 @@ for i in range(torch.cuda.device_count()):
 # Available model configurations
 MODEL_CONFIGS = {
     "llama3-8b": "./pre_trained/Llama-3-8B-Instruct",
+    "llama31-8b": "./pre_trained/Llama-3.1-8B-Instruct",
+    "llama32-3b": "./pre_trained/Llama-3.2-3B-Instruct",
     "llama33-70b": "./pre_trained/Llama-3.3-70B-Instruct",
     "llama4-17b": "./pre_trained/Llama-4-Scout-17B-16E-Instruct",
 }
