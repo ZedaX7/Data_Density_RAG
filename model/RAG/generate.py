@@ -13,7 +13,7 @@ gc.collect()
 
 # Set environment variables for multi-GPU
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 print(f"Available GPUs: {torch.cuda.device_count()}")
 for i in range(torch.cuda.device_count()):
@@ -85,7 +85,7 @@ def initialize_model(model_key="llama33-70b"):
         trust_remote_code=True,
         max_memory={
             0: "24GiB",   # 4090
-            1: "24GiB",   # 3090 Ti
+            # 1: "24GiB",   # 3090 Ti
             # 2: "24GiB",   # 3090
             # 3: "24GiB",   # 3090
         },

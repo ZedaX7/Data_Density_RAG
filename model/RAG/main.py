@@ -1,10 +1,7 @@
-import ast
-import re
 import os
 import sys
 import json
 from datetime import datetime
-import pybamm
 import random
 import pandas as pd
 import numpy as np
@@ -13,99 +10,19 @@ import torch
 from retrieve import retrieve_relevant_docs
 from generate import generate_answer, initialize_model
 from visual_rendering import render_battery_pack
+from validation import (extract_cell_locations, extract_cell_connections, extract_design_features, 
+                        validate_with_pybamm, validate_design, print_validation_summary, ValidationResult)
 
 # ==================== USER CONFIGURATION ====================
 # Data configuration
 sub_set = "full"
-raw_set = "[16-16-4-16-16]"
+raw_set = "[32-32-4-32-32]"
 DATA_NAME = sub_set + "_" + raw_set
 
 # Model configuration
 # Available models: "llama3-8b", "llama31-8b", "llama32-3b", "llama33-70b", "llama4-17b"
-MODEL_KEY = "llama31-8b"
+MODEL_KEY = "llama32-3b"
 # ============================================================
-
-def validate_with_pybamm(features):
-    try:
-        model = pybamm.lithium_ion.SPM()
-        parameter_values = model.default_parameter_values
-        
-        parameter_values.update({
-            "Nominal cell capacity [A.h]": features["generated_capacity"],
-            "Number of cells connected in series to make a battery": features["series_count"],
-            "Number of electrodes connected in parallel to make a cell": features["parallel_count"],
-        })
-        
-        sim = pybamm.Simulation(model, parameter_values=parameter_values)
-        sim.solve([0, 600])
-        return True
-    
-    except Exception as e:
-        print(f"❌ PyBaMM validation failed: {e}")
-        return False
-    
-
-def extract_list_block(field_name, text):
-    """
-    Extracts a bracketed list from the text for a given field name.
-    Handles optional prefixes (-, *), any casing, and multiline brackets.
-    """
-    # Match field name with optional prefix and any casing
-    pattern = rf"(?:[-*]?\s*)?{field_name}\s*[:=]\s*\["
-    match = re.search(pattern, text, re.IGNORECASE)
-    if not match:
-        print(f"[DEBUG] Start of {field_name} block not found.")
-        return None
-
-    # Walk forward from the matched '[' to find balanced brackets
-    start = match.end() - 1
-    bracket_count = 1
-    end = start
-    while end < len(text) - 1 and bracket_count > 0:
-        end += 1
-        if text[end] == "[":
-            bracket_count += 1
-        elif text[end] == "]":
-            bracket_count -= 1
-
-    try:
-        raw_block = text[start:end + 1]
-        return ast.literal_eval(raw_block)
-    except Exception as e:
-        print(f"[ERROR] Failed to parse {field_name}: {e}")
-        return None
-
-
-def extract_scalar(field_name, text):
-    """Extract a numeric scalar value for field_name from text."""
-    pattern = rf"{field_name}\s*[:=]\s*([0-9]+(?:\.[0-9]+)?)"
-    m = re.search(pattern, text, re.IGNORECASE)
-    if m:
-        try:
-            return float(m.group(1))
-        except ValueError:
-            pass
-    print(f"[DEBUG] {field_name} not found or invalid.")
-    return None
-
-
-def extract_cell_locations(text):
-    return extract_list_block("cell_locations", text)
-
-def extract_cell_connections(text):
-    return extract_list_block("cell_connections", text)
-
-def extract_design_features(text):
-    return {
-        "generated_voltage": extract_scalar("design_voltage", text),
-        "generated_capacity": extract_scalar("design_capacity", text),
-        "generated_width_mm": extract_scalar("design_width", text),
-        "generated_depth_mm": extract_scalar("design_depth", text),
-        "generated_height_mm": extract_scalar("design_height", text),
-        "series_count": extract_scalar("series_count", text),
-        "parallel_count": extract_scalar("parallel_count", text),
-    }
-
 
 def generate_timestamped_basename(prefix="battery_pack_rendering"):
     """Generate a shared basename using timestamp for HTML and JSON files."""
@@ -151,8 +68,15 @@ def generate_random_prompt(seed=None, cell_limit=16):
     return prompt, voltage, capacity, width, depth, height #, application
 
 
-def main(query, render=False):
-    """Generate a single battery pack design for the given query."""
+def main(query, required_specs=None, render=False):
+    """
+    Generate a single battery pack design for the given query.
+
+    Args:
+        query: The design prompt
+        required_specs: Optional dict with keys: voltage, capacity, width_mm, depth_mm, height_mm
+        render: Whether to render the battery pack visualization
+    """
     docs = retrieve_relevant_docs(query, data_name=DATA_NAME, top_k=3)
     max_retries = 3
     retry_count = 0
@@ -161,19 +85,20 @@ def main(query, render=False):
         output = generate_answer(query, docs, model_key=MODEL_KEY)
         print(output)
 
-        cell_locations = extract_cell_locations(output)
-        # cell_connections = extract_cell_connections(output)
-        features = extract_design_features(output)
+        # Perform comprehensive validation
+        print("\n" + "="*50)
+        print("PERFORMING COMPREHENSIVE VALIDATION")
+        print("="*50)
+        validation_results = validate_design(
+            output=output,
+            required_specs=required_specs
+        )
 
-        # Check parsing success
-        if not cell_locations or not all(features.values()):
-            print("[WARNING] Incomplete design extracted; retrying generation...")
-            retry_count += 1
-            continue
-
-        # Validate with PyBaMM
-        pybamm_result = validate_with_pybamm(features)
-        if pybamm_result:
+        # pybamm_result = validate_with_pybamm(features)
+        all_valid = print_validation_summary(validation_results)
+        if all_valid:
+            cell_locations = extract_cell_locations(output)
+            features = extract_design_features(output)
             print("✅ Design validated successfully.")
             break
         else:
@@ -209,7 +134,8 @@ def main(query, render=False):
     return {
         "cell_locations": cell_locations,
         # "cell_connections": cell_connections,
-        "pybamm_result": pybamm_result,
+        "validation_results": validation_results,
+        "all_validations_passed": all_valid,
         **features,
     }
 
@@ -223,7 +149,7 @@ def run_batch_experiments(num_prompts=10, random_seed=2026, cell_limit=16, outpu
 
     # Generate output filename if not provided
     if output_excel is None:
-        output_excel = f"{MODEL_KEY}_results_{DATA_NAME}.xlsx"
+        output_excel = f"CL{cell_limit}_{MODEL_KEY}_results_{DATA_NAME}.xlsx"
 
     print(f"[INFO] Starting batch experiments with {num_prompts} prompts (seed={random_seed})")
     print(f"[INFO] Using model: {MODEL_KEY}")
@@ -243,8 +169,17 @@ def run_batch_experiments(num_prompts=10, random_seed=2026, cell_limit=16, outpu
         print(f"[INFO] Prompt: {prompt}")
 
         try:
+            # Prepare required specs for validation
+            required_specs = {
+                "voltage": req_voltage,
+                "capacity": req_capacity,
+                "width_mm": req_width,
+                "depth_mm": req_depth,
+                "height_mm": req_height,
+            }
+
             # Generate design
-            design_result = main(prompt, render=False)
+            design_result = main(prompt, required_specs=required_specs, render=False)
 
             if design_result is None:
                 # Failed to generate valid design
@@ -266,11 +201,13 @@ def run_batch_experiments(num_prompts=10, random_seed=2026, cell_limit=16, outpu
                     # "cell_connections": None,
                     "series_count": None,
                     "parallel_count": None,
-                    "pybamm_validated": False,
+                    # "pybamm_validated": False,
+                    "all_validations_passed": False,
                     "generation_status": "Failed"
                 })
             else:
                 # Successfully generated design
+                validation_results = design_result.get("validation_results", {})
                 results.append({
                     "experiment_id": i + 1,
                     "prompt": prompt,
@@ -289,7 +226,8 @@ def run_batch_experiments(num_prompts=10, random_seed=2026, cell_limit=16, outpu
                     # "cell_connections": str(design_result["cell_connections"]),
                     "series_count": design_result["series_count"],
                     "parallel_count": design_result["parallel_count"],
-                    "pybamm_validated": design_result["pybamm_result"],
+                    # "pybamm_validated": design_result["pybamm_result"],
+                    "all_validations_passed": design_result.get("all_validations_passed", False),
                     "generation_status": "Success"
                 })
 
@@ -351,7 +289,8 @@ def run_batch_experiments(num_prompts=10, random_seed=2026, cell_limit=16, outpu
                     # "cell_connections": None,
                     "series_count": None,
                     "parallel_count": None,
-                    "pybamm_validated": False,
+                    # "pybamm_validated": False,
+                    "all_validations_passed": False,
                     "generation_status": f"Error: {str(e)}"
                 })
 
@@ -375,7 +314,8 @@ def run_batch_experiments(num_prompts=10, random_seed=2026, cell_limit=16, outpu
                 # "cell_connections": None,
                 "series_count": None,
                 "parallel_count": None,
-                "pybamm_validated": False,
+                # "pybamm_validated": False,
+                "all_validations_passed": False,
                 "generation_status": f"Error: {str(e)}"
             })
 
@@ -390,7 +330,8 @@ def run_batch_experiments(num_prompts=10, random_seed=2026, cell_limit=16, outpu
     print(f"\n{'='*50}")
     print(f"[INFO] Batch experiments complete!")
     print(f"[INFO] Results saved to: {excel_path}")
-    print(f"[INFO] Success rate: {df['pybamm_validated'].sum()}/{num_prompts} ({df['pybamm_validated'].sum()/num_prompts*100:.1f}%)")
+    # print(f"[INFO] Success rate: {df['pybamm_validated'].sum()}/{num_prompts} ({df['pybamm_validated'].sum()/num_prompts*100:.1f}%)")
+    print(f"[INFO] Success rate: {df['all_validations_passed'].sum()}/{num_prompts} ({df['all_validations_passed'].sum()/num_prompts*100:.1f}%)")
     print(f"{'='*50}")
 
     return df
