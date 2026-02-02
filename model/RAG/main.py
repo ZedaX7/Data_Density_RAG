@@ -11,17 +11,17 @@ from retrieve import retrieve_relevant_docs
 from generate import generate_answer, initialize_model
 from visual_rendering import render_battery_pack
 from validation import (extract_cell_locations, extract_cell_connections, extract_design_features, 
-                        validate_with_pybamm, validate_design, print_validation_summary, ValidationResult)
+                        validate_with_pybamm, validate_design, print_validation_summary)
 
 # ==================== USER CONFIGURATION ====================
 # Data configuration
 sub_set = "full"
-raw_set = "[32-32-4-32-32]"
+raw_set = "[16-16-4-16-16]"
 DATA_NAME = sub_set + "_" + raw_set
 
 # Model configuration
 # Available models: "llama3-8b", "llama31-8b", "llama32-3b", "llama33-70b", "llama4-17b"
-MODEL_KEY = "llama32-3b"
+MODEL_KEY = "llama31-8b"
 # ============================================================
 
 def generate_timestamped_basename(prefix="battery_pack_rendering"):
@@ -149,7 +149,7 @@ def run_batch_experiments(num_prompts=10, random_seed=2026, cell_limit=16, outpu
 
     # Generate output filename if not provided
     if output_excel is None:
-        output_excel = f"CL{cell_limit}_{MODEL_KEY}_results_{DATA_NAME}.xlsx"
+        output_excel = f"cl{cell_limit}_{MODEL_KEY}_validated_results_{DATA_NAME}.xlsx"
 
     print(f"[INFO] Starting batch experiments with {num_prompts} prompts (seed={random_seed})")
     print(f"[INFO] Using model: {MODEL_KEY}")

@@ -367,10 +367,11 @@ def validate_electrical_specs(
     result = ValidationResult()
 
     # Calculate expected voltage (series affects voltage)
-    expected_voltage = claimed_series * CELL_SPECS["nominal_voltage"]
+    nominal_voltage = CELL_SPECS["nominal_voltage"]
+    expected_voltage = claimed_series * nominal_voltage
     voltage_diff = abs(claimed_voltage - expected_voltage)
 
-    result.add_detail("expected_voltage", f"{claimed_series} × {CELL_SPECS["nominal_voltage"]}V = {expected_voltage}V")
+    result.add_detail("expected_voltage", f"{claimed_series} × {nominal_voltage}V = {expected_voltage}V")
     result.add_detail("claimed_voltage", f"{claimed_voltage}V")
 
     if voltage_diff > voltage_tolerance:
@@ -382,10 +383,11 @@ def validate_electrical_specs(
         result.add_detail("voltage_calc_check", f"✓ {claimed_voltage}V matches {claimed_series}S configuration")
 
     # Calculate expected capacity (parallel affects capacity)
-    expected_capacity = claimed_parallel * CELL_SPECS["nominal_capacity"]
+    nominal_capacity = CELL_SPECS["nominal_capacity"]
+    expected_capacity = claimed_parallel * nominal_capacity
     capacity_diff = abs(claimed_capacity - expected_capacity)
 
-    result.add_detail("expected_capacity", f"{claimed_parallel} × {CELL_SPECS["nominal_capacity"]}Ah = {expected_capacity}Ah")
+    result.add_detail("expected_capacity", f"{claimed_parallel} × {nominal_capacity}Ah = {expected_capacity}Ah")
     result.add_detail("claimed_capacity", f"{claimed_capacity}Ah")
 
     if capacity_diff > capacity_tolerance:

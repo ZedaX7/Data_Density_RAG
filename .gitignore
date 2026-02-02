@@ -1,5 +1,6 @@
 # local data / artifacts
-data/
+*.json
+*.npy
 *.faiss
 *.index
 *.xlsx
