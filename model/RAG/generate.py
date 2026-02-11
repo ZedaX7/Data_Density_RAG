@@ -3,6 +3,8 @@ from accelerate import infer_auto_device_map
 import torch
 import gc
 import os
+import outlines
+from schemas import BatteryDesign
 
 # Clear all GPU memory
 for i in range(torch.cuda.device_count()):
@@ -33,10 +35,12 @@ MODEL_CONFIGS = {
 model = None
 tokenizer = None
 current_model_id = None
+outlines_model = None
+structured_generator = None
 
 def initialize_model(model_key="llama33-70b"):
     """Initialize the model and tokenizer based on the model key."""
-    global model, tokenizer, current_model_id
+    global model, tokenizer, current_model_id, outlines_model, structured_generator
 
     if model_key not in MODEL_CONFIGS:
         raise ValueError(f"Invalid model key: {model_key}. Available options: {list(MODEL_CONFIGS.keys())}")
@@ -52,6 +56,8 @@ def initialize_model(model_key="llama33-70b"):
     if model is not None:
         del model
         del tokenizer
+        del outlines_model
+        del structured_generator
         torch.cuda.empty_cache()
         gc.collect()
 
@@ -94,16 +100,67 @@ def initialize_model(model_key="llama33-70b"):
     current_model_id = model_id
     print(f"[INFO] Model {model_key} loaded successfully.")
 
-# Print device mapping to see how the model is distributed
-# print("\nModel device mapping:")
-# for name, param in model.named_parameters():
-#     if hasattr(param, 'device'):
-#         print(f"{name}: {param.device}")
-#     if "layers.0" in name:  # Just show first few layers to avoid spam
-#         break
+    # Initialize outlines model wrapper for structured generation
+    print(f"[INFO] Initializing structured generation with Outlines...")
+    outlines_model = outlines.models.Transformers(model, tokenizer)
+    structured_generator = outlines.generate.json(outlines_model, BatteryDesign)
+    print(f"[INFO] Structured generation initialized.")
     
     
-def generate_answer(query, context_docs, model_key="llama33-70b"):
+def generate_answer(query, context_docs, model_key="llama33-70b") -> BatteryDesign:
+    """
+    Generate a structured battery pack design using Outlines constrained generation.
+
+    Args:
+        query: User's design requirements
+        context_docs: Retrieved relevant designs for context
+        model_key: Which model to use
+
+    Returns:
+        BatteryDesign: Structured Pydantic object with design details
+    """
+    # Ensure model is initialized
+    if model is None or structured_generator is None:
+        initialize_model(model_key)
+
+    context = "\n".join(f"- {doc}" for doc in context_docs)
+
+    # Prompt optimized for JSON output
+    prompt = f"""You are an expert battery pack designer. Design a battery pack based on the requirements.
+
+        Requirements: {query}
+
+        Reference designs from database:
+        {context}
+
+        Based on these requirements and references, provide a battery pack design as JSON with these fields:
+        - series_count: number of cells in series (determines voltage)
+        - parallel_count: number of cells in parallel (determines capacity)
+        - design_voltage: total pack voltage in V (series_count × 3.7V)
+        - design_capacity: total capacity in Ah (parallel_count × 2.5Ah)
+        - design_width: pack width in mm
+        - design_depth: pack depth in mm
+        - design_height: pack height in mm
+        - cell_locations: list of [x, y, z] coordinates for each cell
+        - explanation: brief explanation of design choices
+
+        Cell specifications (18650): 3.7V nominal, 2.5Ah capacity, 18mm diameter, 65mm length.
+        Ensure dimensions fit all cells with 2mm spacing between cells and 5mm safety margin.
+
+        JSON output:"""
+
+    # Use structured generator for guaranteed valid JSON
+    result = structured_generator(prompt)
+
+    torch.cuda.empty_cache()
+    return result
+
+
+def generate_answer_legacy(query, context_docs, model_key="llama33-70b"):
+    """
+    Legacy text-based generation (kept for comparison/fallback).
+    Returns raw text output that requires regex parsing.
+    """
     # Ensure model is initialized
     if model is None:
         initialize_model(model_key)
@@ -123,15 +180,15 @@ def generate_answer(query, context_docs, model_key="llama33-70b"):
         f"Relevant past designs:\n{context}\n"
         f"Answer:"
     )
-    
+
     inputs = tokenizer(prompt, return_tensors="pt")
     inputs = {k: v.to("cuda:0") for k, v in inputs.items()}
 
-    outputs = model.generate(**inputs, 
-                             max_new_tokens=1024, 
-                             temperature=0.7, 
+    outputs = model.generate(**inputs,
+                             max_new_tokens=1024,
+                             temperature=0.7,
                              top_p=0.95)
-    
+
     # Clean up
     del inputs
     torch.cuda.empty_cache()

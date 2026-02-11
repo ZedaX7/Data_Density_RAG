@@ -10,8 +10,10 @@ import torch
 from retrieve import retrieve_relevant_docs
 from generate import generate_answer, initialize_model
 from visual_rendering import render_battery_pack
-from validation import (extract_cell_locations, extract_cell_connections, extract_design_features, 
-                        validate_with_pybamm, validate_design, print_validation_summary)
+from schemas import BatteryDesign
+from validation import (extract_cell_locations, extract_cell_connections, extract_design_features,
+                        validate_with_pybamm, validate_design, validate_design_structured,
+                        print_validation_summary)
 
 # ==================== USER CONFIGURATION ====================
 # Data configuration
@@ -72,34 +74,46 @@ def main(query, required_specs=None, render=False):
     """
     Generate a single battery pack design for the given query.
 
+    Uses structured generation with Outlines to guarantee valid JSON output.
+    The LLM output is a BatteryDesign Pydantic object.
+
     Args:
         query: The design prompt
         required_specs: Optional dict with keys: voltage, capacity, width_mm, depth_mm, height_mm
         render: Whether to render the battery pack visualization
+
+    Returns:
+        Dict with design details and validation results, or None if validation fails
     """
     docs = retrieve_relevant_docs(query, data_name=DATA_NAME, top_k=3)
     max_retries = 3
     retry_count = 0
+    design: BatteryDesign = None
 
     while retry_count < max_retries:
-        output = generate_answer(query, docs, model_key=MODEL_KEY)
-        print(output)
+        # Generate structured output (guaranteed valid JSON)
+        design = generate_answer(query, docs, model_key=MODEL_KEY)
 
-        # Perform comprehensive validation
+        # Print the structured design
+        print("\n[INFO] Generated Design (Structured):")
+        print(f"  Series: {design.series_count}, Parallel: {design.parallel_count}")
+        print(f"  Voltage: {design.design_voltage}V, Capacity: {design.design_capacity}Ah")
+        print(f"  Dimensions: {design.design_width} x {design.design_depth} x {design.design_height} mm")
+        print(f"  Cells: {len(design.cell_locations)} locations")
+        print(f"  Explanation: {design.explanation}")
+
+        # Perform comprehensive validation using structured validator
         print("\n" + "="*50)
         print("PERFORMING COMPREHENSIVE VALIDATION")
         print("="*50)
-        validation_results = validate_design(
-            output=output,
+        validation_results = validate_design_structured(
+            design=design,
             required_specs=required_specs
         )
 
-        # pybamm_result = validate_with_pybamm(features)
         all_valid = print_validation_summary(validation_results)
         if all_valid:
-            cell_locations = extract_cell_locations(output)
-            features = extract_design_features(output)
-            print("✅ Design validated successfully.")
+            print("Design validated successfully.")
             break
         else:
             print("[WARNING] Design invalid; retrying generation...")
@@ -120,23 +134,24 @@ def main(query, required_specs=None, render=False):
 
     if render:
         print(f"[INFO] Rendering battery pack to: {html_path}")
-        render_battery_pack(cell_locations, output_html=html_path, open_browser=False)
+        render_battery_pack(design.cell_locations, output_html=html_path, open_browser=False)
 
-        # Save the JSON
+        # Save the JSON (use Pydantic's model_dump for serialization)
         with open(json_path, "w") as f:
-            json.dump({
-                # "cell_connections": cell_connections,
-                "cell_locations": cell_locations,
-                **features,
-                }, f, indent=2)
+            json.dump(design.model_dump(), f, indent=2)
         print(f"[INFO] Saved design data to: {json_path}")
 
     return {
-        "cell_locations": cell_locations,
-        # "cell_connections": cell_connections,
+        "cell_locations": design.cell_locations,
         "validation_results": validation_results,
         "all_validations_passed": all_valid,
-        **features,
+        "generated_voltage": design.design_voltage,
+        "generated_capacity": design.design_capacity,
+        "generated_width_mm": design.design_width,
+        "generated_depth_mm": design.design_depth,
+        "generated_height_mm": design.design_height,
+        "series_count": design.series_count,
+        "parallel_count": design.parallel_count,
     }
 
 
@@ -340,7 +355,7 @@ def run_batch_experiments(num_prompts=10, random_seed=2026, cell_limit=16, outpu
 if __name__ == "__main__":
     # Run batch experiments with random prompts
     run_batch_experiments(
-        num_prompts=100,
+        num_prompts=10,
         random_seed=2026, 
         cell_limit=16
     )

@@ -23,11 +23,11 @@ DEVICE = "cuda:0"
 CACHE_FOLDER = "./pre_trained/hf_cache"
 
 # Hybrid scoring weights (should sum to 1.0)
-WEIGHT_EMBEDDING = 0.3    # Semantic similarity weight
-WEIGHT_FEATURE = 0.7      # Feature distance weight
+WEIGHT_EMBEDDING = 0.2    # Semantic similarity weight
+WEIGHT_FEATURE = 0.8      # Feature distance weight
 
 # Constraint tolerance for pre-filtering (as fraction of target value)
-CONSTRAINT_TOLERANCE = 0.5  # Allow 50% deviation for pre-filtering
+CONSTRAINT_TOLERANCE = 0.1  # Allow 10% deviation for pre-filtering
 # =======================================================
 
 # Global cache for loaded models and indices
@@ -290,7 +290,7 @@ def retrieve_relevant_docs(
 ) -> List[Dict]:
 
     # Load all necessary data
-    index, metadata, features, config = load_retrieval_data(data_name)
+    index, features, metadata, config = load_retrieval_data(data_name)
     model = load_embedding_model(config["embedding_model"])
 
     if verbose:

@@ -2,8 +2,9 @@ import ast
 import re
 import math
 import numpy as np
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Union
 import pybamm
+from schemas import BatteryDesign
 
 # 18650 Cell specifications
 CELL_SPECS = {
@@ -537,6 +538,73 @@ def validate_design(
                 "width_mm": float(features["generated_width_mm"]),
                 "depth_mm": float(features["generated_depth_mm"]),
                 "height_mm": float(features["generated_height_mm"]),
+            }
+        )
+
+    return results
+
+
+def validate_design_structured(
+    design: BatteryDesign,
+    required_specs: Optional[Dict] = None
+) -> Dict[str, ValidationResult]:
+    """
+    Validate a structured BatteryDesign object.
+
+    This is the preferred validation function when using Outlines structured generation,
+    as it works directly with the Pydantic object without needing regex extraction.
+
+    Args:
+        design: BatteryDesign Pydantic object from structured generation
+        required_specs: Optional dict with required voltage, capacity, dimensions
+
+    Returns:
+        Dict mapping validation check names to ValidationResult objects
+    """
+    results = {}
+
+    cell_locations = design.cell_locations
+
+    # 1. validate_design_dimensions
+    results["physical_dimension_validity"] = validate_design_dimensions(
+        cell_locations=cell_locations,
+        claimed_dimensions={
+            "width_mm": design.design_width,
+            "depth_mm": design.design_depth,
+            "height_mm": design.design_height,
+        }
+    )
+
+    # 2. validate_cell_locations
+    results["cell_location_validity"] = validate_cell_locations(
+        cell_locations=cell_locations
+    )
+
+    # 3. validate_cell_count
+    results["cell_count_validity"] = validate_cell_count(
+        cell_locations=cell_locations,
+        claimed_series=design.series_count,
+        claimed_parallel=design.parallel_count
+    )
+
+    # 4. validate_electrical_specs
+    results["electrical_specs_validity"] = validate_electrical_specs(
+        claimed_series=design.series_count,
+        claimed_parallel=design.parallel_count,
+        claimed_voltage=design.design_voltage,
+        claimed_capacity=design.design_capacity
+    )
+
+    # 5. validate_prompt_satisfaction
+    if required_specs:
+        results["prompt_satisfaction_validity"] = validate_prompt_satisfaction(
+            required_specs=required_specs,
+            generated_specs={
+                "voltage": design.design_voltage,
+                "capacity": design.design_capacity,
+                "width_mm": design.design_width,
+                "depth_mm": design.design_depth,
+                "height_mm": design.design_height,
             }
         )
 
